@@ -1,9 +1,9 @@
 {
     "organizations":{
-        "Zoho Org Name 1":"YOUR_ZOHO_ORG_1_ID",
-        "Zoho Org Name 2":"YOUR_ZOHO_ORG_2_ID"
+        "Zoho Org Name 1":"45113156"
+    
     },
     "auth":{
-        "token":"ZOHO_AUTH_TOKEN"
+        "token":"1000.62ab24da1bb221488d75d618982c0bf6.260eeb610f7fbc0997906187b84cef0d"
     }
 }

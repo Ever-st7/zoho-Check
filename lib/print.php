@@ -109,31 +109,55 @@
         </style>
     </head>
 
-    <?
-        if(isset($_POST["expense$org"])) {
-            $zoho = new ZohoBooks($org, $auth['token']);
+    <?php
+// Verifica que la variable $org está definida
+if (isset($_POST['organization_id'])) {
+    $org = $_POST['organization_id'];
+} else {
+    echo "Error: El ID de la organización no está definido.";
+    exit();
+}
 
-            $bank_account = $_POST["bankacc$org"];
-            $expense_account = $_POST["expenseacc$org"];
+// Verifica que los datos necesarios están presentes
+if (!isset($_POST["amount$org"])) {
+    echo "Error: El monto no está definido.";
+    exit();
+}
 
-            $data = array(
-                "account_id" => $expense_account,
-                "paid_through_account_id" => $bank_account,
-                "date" => date("Y-m-d"),
-                "amount" => floatval($_POST["amount$org"]),
-                "description" => "Generated Expense from Zoho Check Print Plugin - " . $_POST["memo$org"],
-                "is_billable" => false
-            );
+// Asignar las variables necesarias
+$expense_account = $_POST["expenseacc$org"];  // Asegúrate de que esto existe en el formulario
+$bank_account = $_POST["bankacc$org"];        // Asegúrate de que esto existe en el formulario
 
-            $request = array(
-                'authtoken'=>$auth['token'],
-                'JSONString'=>json_encode($data),
-                'organization_id'=>$org
-            );
+// Construir el array de datos para crear el gasto
+$data = array(
+    "account_id" => $expense_account,
+    "paid_through_account_id" => $bank_account,
+    "date" => date("Y-m-d"),
+    "amount" => floatval($_POST["amount$org"]),
+    "description" => "Generated Expense from Zoho Check Print Plugin - " . $_POST["memo$org"],
+    "is_billable" => false
+);
 
-            $zoho->createExpense($request);
-        }
-    ?>
+// Crea la solicitud
+$request = array(
+    'authtoken' => $auth['token'],
+    'JSONString' => json_encode($data),
+    'organization_id' => $org
+);
+
+// Llama a la función createExpense para enviar la solicitud
+$zoho->createExpense($request);
+
+// Definir la función convert_number_to_words()
+function convert_number_to_words($number) {
+    $f = new NumberFormatter("es", NumberFormatter::SPELLOUT);
+    return ucfirst($f->format($number));
+}
+
+// Uso de la función (si es necesario)
+echo convert_number_to_words($data["amount"]);
+?>
+
 
     <body>
         <div class="check">

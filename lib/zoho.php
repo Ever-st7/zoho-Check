@@ -1,4 +1,4 @@
-<?
+<?php
     /*
      * Copyright 2013 Cart Designers, LLC
      *
@@ -39,7 +39,7 @@
             $this->apiKey = $api_token;
             $this->organizationId = $organization_id;
 
-            $this->endPointUrl               = "https://books.zoho.com/api/v{$this->zohoBooksApiVersion}/";
+            $this->endPointUrl               = "https://www.zohoapis.com/books/v3/";
             $this->expensesUrl               = $this->endPointUrl."expenses";
             $this->bankAccountsUrl           = $this->endPointUrl."bankaccounts";
             $this->chartOfAccountsUrl        = $this->endPointUrl."chartofaccounts";
@@ -60,28 +60,49 @@
             return json_decode($result, true);
         }
 
-        public function getChartofAccounts($filter = "AccountType.All", $sort = "account_name") {
+        public function getChartofAccounts($filter = "AccountType.Expense", $sort = "account_name") {
             $params = array(
                 "filter_by" => $filter,
                 "sort_column" => $sort
             );
-
-            $call = $this->callZohoBooks($this->chartOfAccountsUrl,null,METHOD_GET,1,$params);
-
-            return $call;
+        
+            $call = $this->callZohoBooks($this->chartOfAccountsUrl, null, METHOD_GET, 1, $params);
+        
+            // Imprimir la respuesta para depuración
+            echo "<pre>Respuesta de Zoho (Cuentas de Gastos): ";
+            print_r($call);
+            echo "</pre>";
+        
+            // Si la conexión es exitosa
+            if ($this->responseCode == 200) {
+                return $call;
+            } else {
+                echo "Error al obtener las cuentas de gastos: HTTP Status " . $this->responseCode;
+                return null;
+            }
         }
 
         public function getBankAccounts($filter = "Status.Active", $sort = "account_name") {
             $params = array(
                 "filter_by" => $filter,
-                "sort_coulmn" => $sort
+                "sort_column" => $sort
             );
-
-            $call = $this->callZohoBooks($this->bankAccountsUrl,null,METHOD_GET,1,$params);
-
-            return $call;
+        
+            $call = $this->callZohoBooks($this->bankAccountsUrl, null, METHOD_GET, 1, $params);
+        
+            // Imprimir la respuesta para depuración
+            echo "<pre>Respuesta de Zoho (Cuentas Bancarias): ";
+            print_r($call);
+            echo "</pre>";
+        
+            // Si la conexión es exitosa
+            if ($this->responseCode == 200) {
+                return $call;
+            } else {
+                echo "Error al obtener las cuentas bancarias: HTTP Status " . $this->responseCode;
+                return null;
+            }
         }
-
         /*
          * This function communicates with Zoho Books REST API.
          * You don't need to call this function directly. It's only for inner class working.
@@ -94,52 +115,59 @@
          */
         private function callZohoBooks($url, $data = null, $method = METHOD_GET, $page = 1, $params){
             $curl = curl_init();
-            if($params != ''){
-                $filter = '';
-                foreach($params as $key => $value){
-                    $filter = $filter.'&'.$key.'='.$value;
+            $filter = '';
+            if (!empty($params)) {
+                foreach ($params as $key => $value) {
+                    $filter .= '&' . $key . '=' . $value;
                 }
             }
-            curl_setopt($curl, CURLOPT_URL, $url.'?authtoken='.$this->apiKey.'&organization_id='.$this->organizationId.'&page='.$page.$filter);
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); // Don't print the result
+            curl_setopt($curl, CURLOPT_URL, $url . '?authtoken=' . $this->apiKey . '&organization_id=' . $this->organizationId . '&page=' . $page . $filter);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $this->timeout);
             curl_setopt($curl, CURLOPT_TIMEOUT, $this->timeout);
             curl_setopt($curl, CURLOPT_FAILONERROR, true);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0); // Don't verify SSL connection
-            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0); //
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-            curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json")); // Send as JSON
-            if($this->advDebug){
-                curl_setopt($curl, CURLOPT_HEADER, true); // Display headers
-                curl_setopt($curl, CURLOPT_VERBOSE, true); // Display communication with server
+            curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+            
+            // Habilitar la depuración avanzada si está activada
+            if ($this->advDebug) {
+                curl_setopt($curl, CURLOPT_HEADER, true);
+                curl_setopt($curl, CURLOPT_VERBOSE, true);
             }
-            if($method == METHOD_POST){
-                curl_setopt($curl, CURLOPT_POST, true);
-            } else if($method == METHOD_PUT){
-                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
-            }
-            if(!is_null($data) && ($method == METHOD_POST || $method == METHOD_PUT)){
-                curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-            }
-
+        
+            // Ejecutar la solicitud cURL
             try {
                 $return = curl_exec($curl);
                 $this->responseCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-
-                if($this->debug || $this->advDebug){
-                    echo "<pre>"; print_r(curl_getinfo($curl)); echo "</pre>";
+                
+                // Registrar en el log del servidor
+                error_log("HTTP Response Code: " . $this->responseCode);
+                error_log("Respuesta de Zoho: " . $return);
+        
+                // Comprobar si hubo algún error en la respuesta
+                if (curl_errno($curl)) {
+                    error_log("Error en cURL: " . curl_error($curl));
                 }
-            } catch(Exception $ex){
-                if($this->debug || $this->advDebug){
-                    echo "<br>cURL error num: ".curl_errno($curl);
-                    echo "<br>cURL error: ".curl_error($curl);
+        
+                if ($this->responseCode >= 400) {  // Manejar errores de HTTP
+                    echo "Error: HTTP Status Code " . $this->responseCode;
+                } else if ($this->responseCode == 200) {
+                    echo "Conexión exitosa a Zoho Books!";
                 }
-                echo "Error on cURL";
+        
+            } catch (Exception $ex) {
+                error_log("Error en cURL: " . $ex->getMessage());
+                echo "Error en cURL: " . $ex->getMessage();
                 $return = null;
             }
-
+        
             curl_close($curl);
-
+        
             return $return;
         }
+        
+        
     }
+?>
